@@ -1,0 +1,173 @@
+---
+title: "EDS_assignment_5"
+author: "M.Kinneen"
+date: "2023-02-18"
+output:
+  pdf_document: default
+  toc: true
+  number_sections: true
+---
+
+
+## 1. Environment set up 
+
+```{r setup, message=FALSE}
+library(dplyr)
+library(ggplot2)
+library(RColorBrewer)
+library(ggridges)
+```
+\pagebreak
+
+## 2. Data read
+
+Read in and check data.
+
+```{r read}
+sisco_data <- read.csv("./data/siscowet.csv", header = TRUE)
+
+#have a look
+head(sisco_data)
+summary(sisco_data)
+
+#check for NA
+sapply(sisco_data, function(x) sum(is.na(x)))
+```
+Sex and age columns have large amounts of NA values. Also one in weight.
+\pagebreak
+
+## 3. Initial exploratory plots
+
+```{r init expl., fig.dim=c(3,3)}
+univar_exploratory <- function(df){
+  columns<-c(colnames(df)) #create list of columns
+  for(i in 1:length(columns)){   #Loop through plotting hist of each
+  var<- df[,i]   #select var for plotting
+  title<-paste(columns[i])
+  if(is.numeric(var)==TRUE){   #if var is numeric, plot, otherwise pass 
+    hist(var,
+         main = title)
+  }else{
+    print(paste0(title,"(column ",i,") ", "is a non-numeric column"))
+  }
+  }
+}
+
+#length_weight plot to check outliers
+ggplot(sisco_data,aes(x=len,y = log(wgt)))+
+  geom_point()+
+  stat_smooth(method = "lm")
+```
+
+```{r, fig.dim=c(3,3)}
+univar_exploratory(df = sisco_data)
+
+```
+
+PNLdepth is approximately normal, median ~ 70.Mesh has right skew, median 2 - 3. Possibly log transform? Fish ID approxiamtely uniform, irrelevant for analysis.Age has right skew, median age of ~ 11. Length is normal, median of 500. Weight is heavy right skew, lagre max value likely outlier (confirmed by length-weight plot). filtering needed
+
+\pagebreak
+
+
+
+
+## 4. Clean and filter data
+
+Weight less skewed though still non-normal. Do not do more filtering as larger fish
+will be underrepresented in data.
+```{r clean}
+sisco_data_cleaned <- sisco_data
+sisco_data_cleaned<- sisco_data%>%
+  filter(wgt <= 7000)%>% #filter max value from wgt
+  mutate(mesh_log = log(mesh)) #log transform mesh
+```
+
+```{r, fig.dim=c(3,3)}
+#Repeat plots
+univar_exploratory(df = sisco_data_cleaned)
+
+```
+
+\pagebreak
+
+## 5. Exploratory plot
+
+Plot showing the length distribution of fish across sites.
+```{r explor.}
+exploratory<-ggplot(sisco_data_cleaned,aes(x=len))+
+  geom_histogram()+
+  xlab("length")+
+  labs(title = "Length distribution for siscowet lake trout")
+
+exploratory
+ggsave("./images/exploratory.jpg") #save image
+
+
+#save image
+
+```
+\pagebreak
+
+## 6. Expository plot
+
+Fish length distributions across sites.
+
+```{r expos., results = FALSE}
+
+palette<- brewer.pal(4,"Set2") #colorblinf friendly paeltte
+site_names<- unique(sisco_data_cleaned$locID) #site names for labels
+samples<-table(sisco_data_cleaned$locID) # count data for lavbels
+
+expository_plot<-
+  #Define data
+  ggplot(sisco_data_cleaned,aes(x = len, y = locID, alpha =0.05, fill = locID))+
+  #Define geometry (histograms)
+  geom_density_ridges(stat = "binline", scale = 1, size = 0.01)+
+  #Overlay curve
+  geom_density_ridges(scale = 1, size = 0.01)+
+    scale_fill_manual(values = palette)+
+  #Set axis breaks
+  scale_x_continuous(breaks = seq(200,800,150))+
+  #Add title
+  labs(title = substitute(paste("Length distributions of Siscowet Lake trout ",
+                     italic("(Salvelinus namaycush)"))),
+       #Data source caption
+       caption = paste("Data source: FSAdata","\n",
+                        "github.com/fishR-Core-Team/FSAdata"))+
+  xlab("Fish length (mm)")+
+  ylab("Sampling site")+
+  #Simple theme
+  theme_classic()+
+  #Custom theme - remove y axis title, adjust title position 
+  theme(
+    axis.text.y  = element_blank(),
+    legend.position = "none",
+    axis.ticks.y = element_blank(),
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, size = 7),
+    plot.caption = element_text(size = 5)
+  )+
+  #Add annotations for site name and number of samples.
+  annotate("text",x = 750, y = 1.5, label = site_names[2],colour=palette[1])+
+  annotate("text",x = 750, y = 1.35, label = paste0("n = ",samples[1])
+           ,colour=palette[1],fontface = 3,size = 3)+
+  annotate("text",x = 750, y = 2.5, label = site_names[1],colour=palette[2])+
+   annotate("text",x = 750, y = 2.35, label = paste0("n = ",samples[2])
+           ,colour=palette[2],fontface = 3,size = 3)+
+  annotate("text",x = 750, y = 3.5, label = site_names[4],colour=palette[3])+
+   annotate("text",x = 750, y = 3.35, label = paste0("n = ",samples[3])
+           ,colour=palette[3],fontface = 3,size = 3)+
+  annotate("text",x = 750, y = 4.5, label = site_names[3],colour=palette[4])+
+   annotate("text",x = 750, y = 4.35, label = paste0("n = ",samples[4])
+           ,colour=palette[4],fontface = 3,size = 3)
+
+
+```
+
+```{r, results = FALSE}
+expository_plot
+ggsave("./images/expository.jpg")
+
+```
+
+
