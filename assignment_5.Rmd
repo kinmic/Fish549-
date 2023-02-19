@@ -100,7 +100,7 @@ exploratory<-ggplot(sisco_data_cleaned,aes(x=len))+
   labs(title = "Length distribution for siscowet lake trout")
 
 exploratory
-ggsave("./images/exploratory.jpg") #save image
+ggsave("./images/exploratory.jpg", width = 3.25, height = 2.25) #save image
 
 
 #save image
@@ -166,7 +166,7 @@ expository_plot<-
 
 ```{r, results = FALSE}
 expository_plot
-ggsave("./images/expository.jpg")
+ggsave("./images/expository.jpg", width = 3.25, height = 2.25)
 
 ```
 
